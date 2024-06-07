@@ -1,0 +1,1135 @@
+---
+title: "Untitled"
+output: html_document
+date: "2023-03-21"
+---
+#loadNBA tracking data
+```{r}
+library(tidyverse)
+library(finalfit)
+setwd("/Users/danielbrockett/Desktop/SAL495")
+
+loadnba <- read_csv("NBAtracking2.csv")
+
+loadnba <- loadnba %>%
+  mutate(AST_TO_PASS_PCT = ifelse(is.na(AST_TO_PASS_PCT), 0, AST_TO_PASS_PCT),
+         CATCH_SHOOT_EFG_PCT = ifelse(is.na(CATCH_SHOOT_EFG_PCT), 0, CATCH_SHOOT_EFG_PCT),
+         CATCH_SHOOT_FG_PCT = ifelse(is.na(CATCH_SHOOT_FG_PCT), 0, CATCH_SHOOT_FG_PCT),
+         CATCH_SHOOT_FG3_PCT = ifelse(is.na(CATCH_SHOOT_FG3_PCT), 0, CATCH_SHOOT_FG3_PCT),
+         DEF_RIM_FG_PCT = ifelse(is.na(DEF_RIM_FG_PCT), 0, DEF_RIM_FG_PCT),
+         DREB_CHANCE_PCT = ifelse(is.na(DREB_CHANCE_PCT), 0, CATCH_SHOOT_FG3_PCT),
+         DREB_CONTEST_PCT = ifelse(is.na(DREB_CONTEST_PCT), 0, DREB_CONTEST_PCT),
+         DRIVE_AST_PCT = ifelse(is.na(DRIVE_AST_PCT), 0, DRIVE_AST_PCT),
+         DRIVE_FG_PCT = ifelse(is.na(DRIVE_FG_PCT), 0, DRIVE_FG_PCT),
+         DRIVE_FT_PCT = ifelse(is.na(DRIVE_FT_PCT), 0, DRIVE_FT_PCT),
+         DRIVE_PASSES_PCT = ifelse(is.na(DRIVE_PASSES_PCT), 0, DRIVE_PASSES_PCT),
+         DRIVE_PF_PCT = ifelse(is.na(DRIVE_PF_PCT), 0, DRIVE_PF_PCT),
+         DRIVE_PTS_PCT = ifelse(is.na(DRIVE_PTS_PCT), 0, DRIVE_PTS_PCT),
+         DRIVE_TOV_PCT = ifelse(is.na(DRIVE_TOV_PCT), 0, DRIVE_TOV_PCT),
+         EFF_FG_PCT = ifelse(is.na(EFF_FG_PCT), 0, EFF_FG_PCT),
+         ELBOW_TOUCH_AST_PCT = ifelse(is.na(ELBOW_TOUCH_AST_PCT), 0, ELBOW_TOUCH_AST_PCT),
+         ELBOW_TOUCH_FG_PCT = ifelse(is.na(ELBOW_TOUCH_FG_PCT), 0, ELBOW_TOUCH_FG_PCT),
+         ELBOW_TOUCH_FOULS_PCT = ifelse(is.na(ELBOW_TOUCH_FOULS_PCT), 0, ELBOW_TOUCH_FOULS_PCT),
+         ELBOW_TOUCH_FT_PCT = ifelse(is.na(ELBOW_TOUCH_FT_PCT), 0, ELBOW_TOUCH_FT_PCT),
+         ELBOW_TOUCH_PASSES_PCT = ifelse(is.na(ELBOW_TOUCH_PASSES_PCT), 0, ELBOW_TOUCH_PASSES_PCT),
+         ELBOW_TOUCH_PTS_PCT = ifelse(is.na(ELBOW_TOUCH_PTS_PCT), 0, ELBOW_TOUCH_PTS_PCT),
+         ELBOW_TOUCH_TOV_PCT = ifelse(is.na(ELBOW_TOUCH_TOV_PCT), 0, ELBOW_TOUCH_TOV_PCT),
+         OREB_CHANCE_PCT = ifelse(is.na(OREB_CHANCE_PCT), 0, OREB_CHANCE_PCT),
+         OREB_CONTEST_PCT = ifelse(is.na(OREB_CONTEST_PCT), 0, OREB_CONTEST_PCT),
+         PAINT_TOUCH_AST_PCT = ifelse(is.na(PAINT_TOUCH_AST_PCT), 0, PAINT_TOUCH_AST_PCT),
+         PAINT_TOUCH_FG_PCT = ifelse(is.na(PAINT_TOUCH_FG_PCT), 0, PAINT_TOUCH_FG_PCT),
+         PAINT_TOUCH_FOULS_PCT = ifelse(is.na(PAINT_TOUCH_FOULS_PCT), 0, PAINT_TOUCH_FOULS_PCT),
+         PAINT_TOUCH_FT_PCT = ifelse(is.na(PAINT_TOUCH_FT_PCT), 0, PAINT_TOUCH_FT_PCT),
+         PAINT_TOUCH_PASSES_PCT = ifelse(is.na(PAINT_TOUCH_PASSES_PCT), 0, PAINT_TOUCH_PASSES_PCT),
+         PAINT_TOUCH_PTS_PCT = ifelse(is.na(PAINT_TOUCH_PTS_PCT), 0, PAINT_TOUCH_PTS_PCT),
+         PAINT_TOUCH_TOV_PCT = ifelse(is.na(PAINT_TOUCH_TOV_PCT), 0, PAINT_TOUCH_TOV_PCT),
+         )
+
+unique(loadnba$DRIVE_FT_PCT)
+loadnba %>%
+  colnames()
+#playerID, season, positionGroup, and Position, teamID
+loadnba$zPos <- substr(loadnba$position, 0, 2)
+loadnba$zPos <- ifelse(loadnba$zPos == "C-", "C", loadnba$zPos)
+unique(loadnba$zPos)
+
+colnames(loadnba) <- tolower(colnames(loadnba))
+
+loadnba$playszn <- paste0(loadnba$player_id, "_", str_sub(loadnba$season, 1, 4))
+```
+
+#player Age data collection
+```{r}
+sznStartYear <- c(2013:2021)
+sznEndYear <- sznStartYear + 1
+years <- tibble(sznStartYear, sznEndYear)
+
+#create season description
+years <- years %>%
+  mutate(sznYear = paste0(sznStartYear,"-",str_sub(sznEndYear, -2, -1), sep =""))
+
+#bbRef player info
+Sys.setenv("VROOM_CONNECTION_SIZE" = 131072 * 2)
+bbref1 <- bref_players_stats(years$sznEndYear, tables = "totals")
+
+Sys.sleep(9)
+rm(dataBREFPlayerTotals)
+
+aCols <- c(1, 9, 20)
+bbref <- bbref1[,aCols]
+
+colnames(bbref) <- c("season", "zage", "player_id")
+
+bbref$playszn <- paste0(bbref$player_id, "_", str_sub(bbref$season, 1, 4), sep = "")
+
+bcols <- c(2, 4)
+bbref <- bbref[,bcols]
+
+write_csv(bbref, "bbrefInfo.csv")
+bbref <- read_csv("bbrefInfo.csv")
+```
+
+#merging data
+```{r}
+abn <- inner_join(x = loadnba, y = bbref, by = "playszn")
+
+names(abn)[names(abn) == "playszn"] <- "zz_playszn"
+
+newColNames <- sort(colnames(abn))
+
+nba <- abn[, newColNames]
+
+nba <- subset(nba, select = -c(player_id))
+
+a1<-!is.na(nba$catch_shoot_fg3_pct)
+all(a1)
+
+names(nba)[names(nba) == "zz_playszn"] <- "player_id"
+
+newColNames2 <- sort(colnames(nba))
+
+nba2 <- nba[, newColNames2]
+
+nba2 <- replace(nba2, is.na(nba2), 0)
+
+View(nba2[,1:length(nba2)] %>% filter(if_any(everything(), is.na)))
+
+a1<-!is.na(nba2$zpos)
+all(a1)
+
+write_csv(nba2, "nba2.csv")
+```
+
+#data load 1
+```{r}
+nba2 <- read_csv("nba2.csv")
+```
+
+#sorting into data frames
+```{r}
+#remove any direct duplicates, remove adjusted numbers
+cleanRem <- c(2, 5, 33, 75, 80, 105, 107, 141, 149)
+nbaDF1 <- nba2[, -cleanRem]
+
+#remove any direct duplicates, use offensive and def splits, do NOT use adjusted numbers, FGA and FGM not FG%
+trackDuplicates <- c(2, 4, 5, 9, 11, 15, 16, 17, 23, 26, 27, 32, 33, 36, 39, 40, 43, 47, 49, 51, 53, 55, 57, 58, 62, 63, 67, 69, 71, 75, 79, 80, 83, 86, 87, 91, 92, 96, 98, 100, 105, 107, 109, 110, 114, 115, 119, 121, 123, 130, 131, 132, 138:146, 149)
+nbaDF2 <- nba2[, -trackDuplicates]
+
+#remove any direct duplicates, use AVGs, do NOT use adjusted numbers, FGA and FGM not FG%
+tdCols2 <- c(2, 4, 5, 6, 8, 12, 13, 15, 16, 17, 23:26, 28, 29, 30:37, 39, 40, 43, 47, 49, 51, 53, 55, 57, 58, 62, 63, 67, 69, 71, 75, 77:84, 86, 87, 91, 92, 96, 98, 100, 105, 107, 109, 110, 114, 115, 119, 121, 123, 130, 131, 132, 140, 141, 144, 146, 149)
+nbaDF4 <- nba2[, -tdCols2]
+
+nbaDF1 <- nbaDF1 %>%
+  dplyr::select(player_id, zpos, yearseason, zage, everything())
+
+nbaDF2 <- nbaDF2 %>%
+  dplyr::select(player_id, zpos, yearseason, zage, everything())
+
+nbaDF4 <- nbaDF4 %>%
+  dplyr::select(player_id, zpos, yearseason, zage, everything())
+
+write_csv(nbaDF1, "nbaDF1.csv")
+write_csv(nbaDF2, "nbaDF2.csv")
+write_csv(nbaDF4, "nbaDF4.csv")
+
+```
+
+#data load 2
+```{r}
+nbaDF1 <- read_csv("nbaDF1.csv")
+nbaDF2 <- read_csv("nbaDF2.csv")
+nbaDF4 <- read_csv("nbaDF4.csv")
+
+#nbaDF2_og <- read_csv("nbaDF2-original.csv")
+#rm(nbaDF2_og)
+```
+
+#data summary
+```{r}
+#position factorizing
+nbaDF1$zpos <- as.factor(nbaDF1$zpos)
+nbaDF1$zpos <- factor(nbaDF1$zpos, levels = c("PG", "SG", "SF", "PF", "C"))
+
+nbaDF2$zpos <- as.factor(nbaDF2$zpos)
+nbaDF2$zpos <- factor(nbaDF2$zpos, levels = c("PG", "SG", "SF", "PF", "C"))
+
+nbaDF4$zpos <- as.factor(nbaDF4$zpos)
+nbaDF4$zpos <- factor(nbaDF4$zpos, levels = c("PG", "SG", "SF", "PF", "C"))
+
+## keep rows where any selected column is NA (keep_any)
+nbaDF1[,1:length(nbaDF1)] %>% filter(if_any(everything(), is.na))
+
+#drop all NA's
+nbaDF1 <- nbaDF1[,1:length(nbaDF1)] %>%
+  drop_na()
+nbaDF2 <- nbaDF2[,1:length(nbaDF2)] %>%
+  drop_na()
+nbaDF4 <- nbaDF4[,1:length(nbaDF4)] %>%
+  drop_na()
+
+#######ALLL GOOOOOD TO HERE
+impMeasure
+
+#summary stats
+evals <- c(1, 3, 4, 5, 11:13, 16, 18, 39, 51, 122, 128)
+sstats <- as_tibble(nbaDF1[,evals])
+
+colnames(sstats) <- c("position", "age", "ast", "avg_reb_dist", "avg_seconds_per_touch", "avg_speed", "blk", "catch_shoot_fg_pct", "drive_ast", "drive_pts", "pts_per_elbow_touch", "pullup_fg3_pct")
+
+sumtable(sstats)
+
+sumgraphStats <- nbaDF1 %>%
+  group_by(zpos) %>%
+  summarise(total = n(), pts = sum(points), ast = sum(ast), oreb = sum(oreb), dreb = sum(dreb), blk = sum(blk), pu3a = sum(pull_up_fg3a), pu3m = sum(pull_up_fg3m), pu3pct = (pu3m/pu3a)*100, minsPlayed = sum(min))
+
+perPlayergraphStats <- sumgraphStats %>%
+  group_by(zpos) %>%
+  summarise(ppp = pts/total, app = ast/total, orpp = oreb/total, drpp = dreb/total, bpp = blk/total, pu3pct = pu3pct, mppp = minsPlayed/total)
+
+colnames(perPlayergraphStats) <- c("position", "pts_per_player", "ast_per_player", "oreb_per_player", "dreb_per_player", "blk_per_player", "pullup_fg3pct", "mins_played")
+
+pivot_longer(cols = 2:7, names_to = "stat_tracked", values_to = "value")
+
+perPlayergraphStats %>%
+  pivot_longer(cols = 2:7, names_to = "stat_tracked", values_to = "value") %>%
+  mutate(stat_tracked = factor(stat_tracked, levels = c("pts_per_player", "ast_per_player", "dreb_per_player", "oreb_per_player", "blk_per_player", "pullup_fg3pct"))) %>%
+  ggplot() + xlab("") + geom_col(aes(x = stat_tracked, y = value, fill = stat_tracked), color = "black") + geom_label(aes(x = stat_tracked, y = value, label = round(value, 2))) + facet_grid(~position) + ggtitle("Boxscore Statistics per Player by Position") + theme_bw() + theme(axis.text.x = element_text(hjust = 0, size = 14, angle = -45), legend.text = element_text(size = 12),plot.title = element_text(size =16, hjust = 0.5), legend.position = "bottom", plot.margin = unit(c(5,20,5,5), "pt")) + guides(colour = guide_legend(override.aes = list(alpha = 1),
+                               nrow = 1),
+         fill = guide_legend(nrow = 1, title = "Stastic Measured"))
+
+ggsave("sumStats.jpeg")
+
+#observation count stats
+table(nbaDF1$zpos)
+table(nbaDF1$yearseason)
+
+#scale data
+n2 <- nbaDF2[,1:length(nbaDF2)] %>%
+  select(!zpos) %>%
+  drop_na() %>%
+  scale()
+n4 <- nbaDF4[,1:length(nbaDF4)] %>%
+  select(!zpos) %>%
+  drop_na() %>%
+  scale()
+
+trainIndex <- createDataPartition(knnScale$zpos, 
+                                  p = .67, 
+                                  list = FALSE, 
+                                  times = 1)
+```
+
+#knn nbadf2
+```{r}
+nbaDF2
+
+knnScale <- subset(nbaDF2, select = -c(player_id, yearseason, zage))
+knnScale[2:length(colnames(knnScale))] <- scale(knnScale[2:length(colnames(knnScale))])
+
+colnames(knnScale) <- tolower(colnames(knnScale))
+
+trainIndex <- createDataPartition(knnScale$zpos, 
+                                  p = .67, 
+                                  list = FALSE, 
+                                  times = 1)
+
+ktrain <- knnScale[ trainIndex,]
+
+ktest  <- knnScale[-trainIndex,]
+
+#data preparation
+ktrain <- ktrain %>%
+  filter(!is.na(zpos))
+ktest <- ktest %>%
+  filter(!is.na(zpos))
+
+
+#original model
+knn1 <- train(zpos ~ .,
+            data = ktrain,
+            method = 'knn')
+
+confusionMatrix(knn1)
+knn1$results |> 
+  top_n(5, wt = Accuracy) |> 
+  arrange(desc(Accuracy))
+#accuracy
+#0.6394
+
+pred3 <- predict(knn1, newdata = ktest)
+confusionMatrix(pred3, ktest$zpos)
+#accuracy
+#0.6905
+
+#tuning parameters
+ksearch.grid = expand.grid(k = seq(3, 15, 1))
+#training CV
+ktrain.control <- trainControl(method = 'repeatedcv',
+                              number = 3,
+                              repeats = 10)
+
+#model testing
+knn2 <- train(zpos ~ .,
+            data = ktrain,
+            method = 'knn',
+            trControl = ktrain.control,
+            tuneGrid = ksearch.grid)
+
+#results
+knn2$results |> 
+  top_n(5, wt = Accuracy) |> 
+  arrange(desc(Accuracy))
+
+#best results come with k = 14, automatically saved
+
+#evaluation
+confusionMatrix(knn2)
+#accurarcy
+#0.6798
+
+#predictions
+pred4 <- predict(knn2, newdata = ktest)
+confusionMatrix(pred4, ktest$zpos)
+#accuracy
+#0.7024
+
+knn3 <- train(fmla,
+            data = ktrain,
+            method = 'knn',
+            trControl = ktrain.control,
+            tuneGrid = ksearch.grid)
+
+#results
+knn3$results |> 
+  top_n(5, wt = Accuracy) |> 
+  arrange(desc(Accuracy))
+
+#best results come with k = 14, automatically saved
+
+#evaluation
+confusionMatrix(knn3)
+#accurarcy
+#0.6798
+
+#predictions
+pred44 <- predict(knn3, newdata = ktest)
+confusionMatrix(pred44, ktest$zpos)
+#0.7034
+```
+
+#knn nbadf4
+```{r}
+nbaDF4
+
+knnScale4 <- subset(nbaDF4, select = -c(player_id, yearseason, zage))
+knnScale4[2:length(colnames(knnScale4))] <- scale(knnScale4[2:length(colnames(knnScale4))])
+
+colnames(knnScale4) <- tolower(colnames(knnScale4))
+
+ktrain4 <- knnScale4[ trainIndex,]
+
+ktest4  <- knnScale4[-trainIndex,]
+
+#data preparation
+ktrain4 <- ktrain4 %>%
+  filter(!is.na(zpos))
+ktest4 <- ktest4 %>%
+  filter(!is.na(zpos))
+
+
+#original model
+knn11 <- train(zpos ~ .,
+            data = ktrain4,
+            method = 'knn')
+
+
+confusionMatrix(knn11)
+knn11$results |> 
+  top_n(5, wt = Accuracy) |> 
+  arrange(desc(Accuracy))
+#accuracy
+#0.6416
+
+pred7 <- predict(knn11, newdata = ktest4)
+confusionMatrix(pred7, ktest4$zpos)
+#accuracy
+#0.6646
+
+#tuning parameters
+ksearch.grid = expand.grid(k = seq(3, 15, 1))
+#training CV
+ktrain.control <- trainControl(method = 'repeatedcv',
+                              number = 3,
+                              repeats = 10)
+
+#model testing
+knn22 <- train(zpos ~ .,
+            data = ktrain4,
+            method = 'knn',
+            trControl = ktrain.control,
+            tuneGrid = ksearch.grid)
+
+#results
+knn22$results |> 
+  top_n(5, wt = Accuracy) |> 
+  arrange(desc(Accuracy))
+
+#best results come with k = 15, automatically saved
+
+#evaluation
+confusionMatrix(knn22)
+#accurarcy
+#0.677
+
+#predictions
+pred8 <- predict(knn22, newdata = ktest4)
+confusionMatrix(pred8, ktest4$zpos)
+#accuracy
+#0.6855
+
+knn33 <- train(fmla4,
+            data = ktrain4,
+            method = 'knn',
+            trControl = ktrain.control,
+            tuneGrid = ksearch.grid)
+
+#results
+knn33$results |> 
+  top_n(5, wt = Accuracy) |> 
+  arrange(desc(Accuracy))
+
+#best results come with k = 14, automatically saved
+
+#evaluation
+confusionMatrix(knn33)
+#accurarcy
+#0.677
+
+#predictions
+pred88 <- predict(knn33, newdata = ktest4)
+confusionMatrix(pred88, ktest4$zpos)
+#0.6964
+```
+
+#SVM nbadf2
+```{r}
+#SVM
+sscale <- subset(nbaDF2, select = -c(player_id, yearseason, zage))
+sscale[2:length(colnames(sscale))] <- scale(sscale[2:length(colnames(sscale))])
+
+colnames(sscale) <- tolower(colnames(sscale))
+
+
+strain <- sscale[ trainIndex,]
+
+stest  <- sscale[-trainIndex,]
+
+#data prep
+strain <- strain %>%
+  filter(!is.na(zpos))
+stest <- stest %>%
+  filter(!is.na(zpos))
+
+set.seed(200)
+
+#original model
+svm.m1 = train(zpos ~.,
+               data = strain,
+               method = 'svmLinear')
+
+confusionMatrix(svm.m1)
+#accuracy
+#0.7152
+
+svmPred3 <- predict(svm.m1, newdata = stest)
+confusionMatrix(svmPred3, stest$zpos)
+#accuracy
+#0.7335
+
+#tuning parameters
+svmsearch.grid = expand.grid(C = seq(0.1, 2, length = 20))
+
+svm.train.control = trainControl(method = 'repeatedcv',
+                                 number = 3,
+                                 repeats = 10)
+
+#model testing
+svm.m2 = train(zpos ~.,
+               data = strain,
+               method = 'svmLinear',
+               trControl = svm.train.control,
+               tuneGrid = svmsearch.grid)
+
+
+#model results
+#best when cost is at 0.2
+svm.m2$results |>  
+  top_n(5, wt = Accuracy) |> 
+  arrange(desc(Accuracy))
+
+# results for the best model
+confusionMatrix(svm.m2)
+#accuracy
+#0.7404
+
+svmPred4 <- predict(svm.m2, newdata = stest)
+confusionMatrix(svmPred4, stest$zpos)
+#accuracy
+#0.7434
+
+svm.m3 = train(fmla,
+               data = strain,
+               method = 'svmLinear',
+               trControl = svm.train.control,
+               tuneGrid = svmsearch.grid)
+
+#model results
+#best when cost is at 0.3
+svm.m3$results |>  
+  top_n(5, wt = Accuracy) |> 
+  arrange(desc(Accuracy))
+
+# results for the best model
+confusionMatrix(svm.m3)
+#accuracy
+#0.7436
+
+svmPred44 <- predict(svm.m3, newdata = stest)
+confusionMatrix(svmPred44, stest$zpos)
+#accuracy
+#0.7401
+
+```
+
+#SVM nbadf4
+```{r}
+#SVM
+nbaDF4
+
+sscale4 <- subset(nbaDF4, select = -c(player_id, yearseason, zage))
+sscale4[2:length(colnames(sscale4))] <- scale(sscale4[2:length(colnames(sscale4))])
+
+colnames(sscale4) <- tolower(colnames(sscale4))
+
+strain4 <- sscale4[ trainIndex,]
+
+stest4  <- sscale4[-trainIndex,]
+
+#data prep
+strain4 <- strain4 %>%
+  filter(!is.na(zpos))
+stest4 <- stest4 %>%
+  filter(!is.na(zpos))
+
+set.seed(400)
+
+#original model
+svm.m11 = train(zpos ~.,
+               data = strain4,
+               method = 'svmLinear')
+
+confusionMatrix(svm.m11)
+#accuracy
+#0.7129
+
+svmPred7 <- predict(svm.m11, newdata = stest4)
+confusionMatrix(svmPred7, stest4$zpos)
+#accuracy
+#0.7371
+
+#tuning parameters
+svmsearch.grid = expand.grid(C = seq(0.1, 2, length = 20))
+
+svm.train.control = trainControl(method = 'repeatedcv',
+                                 number = 3,
+                                 repeats = 10)
+
+#model testing
+svm.m22 = train(zpos ~.,
+               data = strain4,
+               method = 'svmLinear',
+               trControl = svm.train.control,
+               tuneGrid = svmsearch.grid)
+
+
+#model results
+svm.m22$results |>  
+  top_n(5, wt = Accuracy) |> 
+  arrange(desc(Accuracy))
+#cost = 0.3, first to have a cost above the minimum
+
+# results for the best model
+confusionMatrix(svm.m22)
+#accuracy
+#0.7274
+
+svmPred8 <- predict(svm.m22, newdata = stest4)
+confusionMatrix(svmPred8, stest4$zpos)
+
+#accuracy
+#0.735
+
+svm.m33 = train(fmla4,
+               data = strain4,
+               method = 'svmLinear',
+               trControl = svm.train.control,
+               tuneGrid = svmsearch.grid)
+
+
+#model results
+svm.m33$results |>  
+  top_n(5, wt = Accuracy) |> 
+  arrange(desc(Accuracy))
+#cost = 0.3, first to have a cost above the minimum
+
+# results for the best model
+confusionMatrix(svm.m33)
+#accuracy
+#0.7351
+
+svmPred88 <- predict(svm.m33, newdata = stest4)
+confusionMatrix(svmPred88, stest4$zpos)
+
+#accuracy
+#0.7212
+```
+
+#random forest libraries
+```{r}
+#for Random Forest
+library(randomForest)
+library(forcats)
+```
+
+#random forest 2
+```{r}
+nbaDF2
+
+rfscale <- subset(nbaDF2, select = -c(player_id, yearseason, zage))
+rfscale[2:length(colnames(rfscale))] <- scale(rfscale[2:length(colnames(rfscale))])
+
+colnames(rfscale) <- tolower(colnames(rfscale))
+
+rftrain <- rfscale[ trainIndex,]
+
+rftest  <- rfscale[-trainIndex,]
+#data prep
+rftrain <- rftrain %>%
+  filter(!is.na(zpos))
+rftest <- rftest %>%
+  filter(!is.na(zpos))
+
+set.seed(111)
+
+#original model
+rf.m1 <- train(zpos ~.,
+           data = rftrain, 
+           method = 'rf',
+           metric = 'Accuracy')
+
+confusionMatrix(rf.m1)
+#accurarcy
+#0.7134
+
+iScores <- varImp(object = rf.m1, useModel = TRUE, conditional=FALSE, scale = FALSE)
+
+impMeasure <- data.frame(iScores$importance)
+impMeasure$Vars <- row.names(impMeasure)
+impMeasure <- as_tibble(impMeasure)
+impMeasure <- impMeasure %>%
+  arrange(desc(Overall))
+impMeasure
+impMeasure %>%
+  filter(Overall >= 5)
+
+iScores$importance %>% 
+  rownames_to_column() %>%
+  arrange(Overall) %>%
+  mutate(rowname = fct_inorder(rowname)) %>%
+  ggplot()+
+    geom_col(aes(x = rowname, y = Overall))+
+    coord_flip()+
+    theme_bw()
+
+rfPred1 <- predict(rf.m1, newdata = rftest)
+confusionMatrix(rfPred1, rftest$zpos)
+#accuracy
+#0.7166
+
+
+#tuning parameters
+rf.search.grid <- expand.grid(.mtry = seq(5, 80, by=5)) 
+
+rf.train.control <- trainControl(method = 'repeatedcv',
+                             number = 3,
+                             repeats = 10)
+#model testing
+rf.m2 <- train(zpos ~.,
+              data = rftrain,
+              method = 'rf',
+              metric = 'Accuracy',
+              trControl = rf.train.control,
+              tuneGrid = rf.search.grid)
+
+
+rf.m2$results |>  
+  top_n(5, wt = Accuracy) |> 
+  arrange(desc(Accuracy))
+
+# results for the best model
+confusionMatrix(rf.m2)
+#accurarcy
+#0.7242
+
+rfPred2 <- predict(rf.m2, newdata = rftest)
+confusionMatrix(rfPred2, rftest$zpos)
+#accuracy
+#0.7048
+
+iScores2 <- varImp(object = rf.m2, useModel = TRUE, conditional=FALSE, scale = FALSE)
+
+impMeasure2 <- data.frame(iScores2$importance)
+impMeasure2$Vars <- row.names(impMeasure2)
+impMeasure2 <- as_tibble(impMeasure2)
+impMeasure2 <- impMeasure2 %>%
+  arrange(desc(Overall))
+impMeasure2
+iVars2 <- impMeasure2 %>%
+  filter(Overall >= 7)
+
+infoVars <- iVars2$Vars
+
+fmla <- as.formula(paste("zpos ~ ", paste(infoVars, collapse= "+")))
+
+rf.m3 <- train(fmla,
+              data = rftrain,
+              method = 'rf',
+              metric = 'Accuracy',
+              trControl = rf.train.control,
+              tuneGrid = rf.search.grid)
+
+rf.m3$results |>  
+  top_n(5, wt = Accuracy) |> 
+  arrange(desc(Accuracy))
+
+# results for the best model
+confusionMatrix(rf.m3)
+#accurarcy
+#0.7205
+finalfit(rf.m3)
+
+rfPredi <- predict(rf.m3, newdata = rftest)
+confusionMatrix(rfPredi, rftest$zpos)
+#accuracy
+#0.7111
+```
+
+#rfe2 testing
+```{r}
+control <- rfeControl(functions=rfFuncs, 
+                      method="repeatedcv",
+                      repeats = 5,
+                      number=10)
+
+rfe1 <- rfe(x = rftrain[2:length(colnames(rftrain))],
+            y = rftrain$zpos,
+            sizes = c(1:66),
+            rfeControl = control)
+```
+
+#random forest 4
+```{r}
+nbaDF4
+
+rfscale4 <- subset(nbaDF4, select = -c(player_id, yearseason, zage))
+rfscale4[2:length(colnames(rfscale4))] <- scale(rfscale4[2:length(colnames(rfscale4))])
+
+colnames(rfscale4) <- tolower(colnames(rfscale4))
+
+rftrain4 <- rfscale4[ trainIndex,]
+
+rftest4  <- rfscale4[-trainIndex,]
+#data prep
+rftrain4 <- rftrain4 %>%
+  filter(!is.na(zpos))
+rftest4 <- rftest4 %>%
+  filter(!is.na(zpos))
+
+set.seed(222)
+
+#original model
+rf.m11 <- train(zpos ~.,
+           data = rftrain4, 
+           method = 'rf',
+           metric = 'Accuracy')
+
+confusionMatrix(rf.m11)
+#accurarcy
+#0.707
+
+rfPred3 <- predict(rf.m11, newdata = rftest4)
+confusionMatrix(rfPred3, rftest4$zpos)
+#accuracy
+#0.7059
+
+
+#tuning parameters
+rf.search.grid <- expand.grid(.mtry = seq(5, 80, by=5)) 
+
+rf.train.control <- trainControl(method = 'repeatedcv',
+                             number = 3,
+                             repeats = 10)
+#model testing
+rf.m22 <- train(zpos ~.,
+              data = rftrain4,
+              method = 'rf',
+              metric = 'Accuracy',
+              trControl = rf.train.control,
+              tuneGrid = rf.search.grid)
+
+
+rf.m22$results |>  
+  top_n(5, wt = Accuracy) |> 
+  arrange(desc(Accuracy))
+
+# results for the best model
+confusionMatrix(rf.m22)
+#accurarcy
+#0.7193
+
+rfPred4<- predict(rf.m22, newdata = rftest4)
+confusionMatrix(rfPred4, rftest4$zpos)
+#accuracy
+#0.6975
+
+iScores4 <- varImp(object = rf.m22, useModel = TRUE, conditional=FALSE, scale = FALSE)
+
+impMeasure4 <- data.frame(iScores4$importance)
+impMeasure4$Vars <- row.names(impMeasure4)
+impMeasure4 <- as_tibble(impMeasure4)
+impMeasure4 <- impMeasure4 %>%
+  arrange(desc(Overall))
+impMeasure4
+iVars4 <- impMeasure4 %>%
+  filter(Overall >= 7)
+
+infoVars4 <- iVars4$Vars
+
+fmla4 <- as.formula(paste("zpos ~ ", paste(infoVars4, collapse= "+")))
+
+rf.m33 <- train(fmla4,
+              data = rftrain4,
+              method = 'rf',
+              metric = 'Accuracy',
+              trControl = rf.train.control,
+              tuneGrid = rf.search.grid)
+
+rf.m33$results |>  
+  top_n(5, wt = Accuracy) |> 
+  arrange(desc(Accuracy))
+
+# results for the best model
+confusionMatrix(rf.m33)
+#accurarcy
+#0.7205
+
+rfPredi2 <- predict(rf.m33, newdata = rftest4)
+confusionMatrix(rfPredi2, rftest$zpos)
+#accuracy
+#0.7069
+
+fmla
+```
+
+#linear model 2
+```{r}
+#kmeans results
+df2 <- subset(nbaDF2, select = -c(yearseason))
+df2[3:length(colnames(df2))] <- scale(nbaDF2[3:length(colnames(df2))])
+
+df2 <- df2 %>%
+  drop_na()
+
+n2 <- subset(df2, select = -c(zpos, zage, player_id))
+
+model.r2 <- kmeans(n2,
+                   centers = 14,
+                   nstart = 25)
+
+cluster_assignment <- data.frame(df2, model.r2$cluster) |>
+  relocate(model.r2.cluster, .after = player_id)
+names(cluster_assignment)[names(cluster_assignment) == "model.r2.cluster"] <- "pospred"
+
+lmData1 <- subset(cluster_assignment, select = -c(zpos, player_id))
+
+lmData1$pospred <- as.character(lmData1$pospred)
+
+
+#random forest new positions
+#####
+rflmtrain <- lmData1[ trainIndex,]
+
+rflmtest  <- lmData1[-trainIndex,]
+
+rf.lm1 <- train(pospred ~ .,
+                data = rflmtrain,
+                method = 'rf',
+                metric = 'Accuracy',
+                trControl = rf.train.control,
+                tuneGrid = rf.search.grid)
+
+confusionMatrix(rf.lm1)
+#accurarcy
+#0.7205
+
+rlmPred <- predict(rf.lm1, newdata = rflmtest)
+confusionMatrix(rlmPred, rflmtest$pospred)
+######
+
+#linear model
+l1 <- lm(pospred ~ ., data = lmData1)
+View(alias(l1))
+vif(l1)
+View(cor(lmData1[2:length(colnames(lmData1))]))
+
+summary(l1)
+```
+
+
+#linear model 4
+```{r}
+#kmeans results
+df4 <- subset(nbaDF4, select = -c(yearseason))
+df4[3:length(colnames(df4))] <- scale(nbaDF4[3:length(colnames(df4))])
+
+df4 <- df4 %>%
+  drop_na()
+
+n4 <- subset(df4, select = -c(zpos, zage, player_id))
+
+model.r4 <- kmeans(n4,
+                   centers = 14,
+                   nstart = 25)
+
+cluster_assignment4 <- data.frame(df4, model.r4$cluster) |>
+  relocate(model.r4.cluster, .after = player_id)
+names(cluster_assignment4)[names(cluster_assignment4) == "model.r4.cluster"] <- "pospred"
+
+lmData4 <- subset(cluster_assignment4, select = -c(zpos, player_id))
+
+lmData4$pospred <- as.character(lmData4$pospred)
+
+
+#linear model
+l4 <- lm(pospred ~ ., data = lmData4)
+summary(l4)
+
+library(stargazer)
+
+stargazer(l1,l4, type = "html", title = "Linear Position-Age Models")
+stargazer(l1, type = "html", digits = 2, out = "PAregression1.html", title = "Linear Position-Age Regression Results")
+```
+
+#clustering nbadf2
+```{r}
+distance <- get_dist(n2) # default method is euclidean
+
+model.r2 <- kmeans(n2,
+                   centers = 14,
+                   nstart = 25)
+model.r2
+
+model.r2$centers
+
+nbaDF2$zpos <- as.factor(nbaDF2$zpos)
+nbaDF2$zpos <- factor(nbaDF2$zpos, levels = c("PG", "SG", "SF", "PF", "C"))
+
+cluster.assignment = data.frame(nbaDF2, model.r2$cluster) |>
+  relocate(model.r2.cluster, .after = zpos)
+glimpse(cluster.assignment)
+
+#model assembly
+k2 <- kmeans(n2, centers = 2, nstart = 25)
+k3 <- kmeans(n2, centers = 3, nstart = 25)
+k4 <- kmeans(n2, centers = 4, nstart = 25)
+k5 <- kmeans(n2, centers = 5, nstart = 25)
+k6 <- kmeans(n2, centers = 6, nstart = 25)
+k7 <- kmeans(n2, centers = 7, nstart = 25)
+k8 <- kmeans(n2, centers = 8, nstart = 25)
+k9 <- kmeans(n2, centers = 9, nstart = 25)
+k10 <- kmeans(n2, centers = 10, nstart = 25)
+k11 <- kmeans(n2, centers = 11, nstart = 25)
+k12 <- kmeans(n2, centers = 12, nstart = 25)
+k13 <- kmeans(n2, centers = 13, nstart = 25)
+k14 <- kmeans(n2, centers = 14, nstart = 25)
+k15 <- kmeans(n2, centers = 15, nstart = 25)
+k16 <- kmeans(n2, centers = 16, nstart = 25)
+
+#visualizations
+p2 <- fviz_cluster(k2, geom = "point",  data = n2) + ggtitle("k = 2")
+p3 <- fviz_cluster(k3, geom = "point",  data = n2) + ggtitle("k = 3")
+p4 <- fviz_cluster(k4, geom = "point",  data = n2) + ggtitle("k = 4")
+p5 <- fviz_cluster(k5, geom = "point",  data = n2) + ggtitle("k = 5") + theme(plot.title = element_text(hjust = 0.5))
+p6 <- fviz_cluster(k6, geom = "point",  data = n2) + ggtitle("k = 6")
+p7 <- fviz_cluster(k7, geom = "point",  data = n2) + ggtitle("k = 7")
+p8 <- fviz_cluster(k8, geom = "point",  data = n2) + ggtitle("k = 8")
+p9 <- fviz_cluster(k9, geom = "point",  data = n2) + ggtitle("k = 9")
+p10 <- fviz_cluster(k10, geom = "point",  data = n2) + ggtitle("k = 10")
+p11 <- fviz_cluster(k11, geom = "point",  data = n2) + ggtitle("k = 11") + theme(plot.title = element_text(hjust = 0.5))
+p12 <- fviz_cluster(k12, geom = "point",  data = n2) + ggtitle("k = 12")
+p13 <- fviz_cluster(k13, geom = "point",  data = n2) + ggtitle("k = 13")
+p14 <- fviz_cluster(k14, geom = "point",  data = n2) + ggtitle("k = 14") + theme(plot.title = element_text(hjust = 0.5))
+p15 <- fviz_cluster(k15, geom = "point",  data = n2) + ggtitle("k = 15")
+p16 <- fviz_cluster(k16, geom = "point",  data = n2) + ggtitle("k = 16")
+
+grid.arrange(p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16, nrow = 3)
+
+grid.arrange(p5, p11, p14, nrow = 1)
+
+ggsave("k")
+```
+#clustering nbadf4
+```{r}
+distance <- get_dist(n4) # default method is euclidean
+
+model.r4 <- kmeans(n4,
+                   centers = 14,
+                   nstart = 25)
+model.r4
+
+model.r4$centers
+
+cluster.assignment4 = data.frame(nbaDF4, model.r4$cluster) |>
+  relocate(model.r4.cluster, .after = zpos)
+glimpse(cluster.assignment4)
+
+
+#model assembly
+k2 <- kmeans(n4, centers = 2, nstart = 25)
+k3 <- kmeans(n4, centers = 3, nstart = 25)
+k4 <- kmeans(n4, centers = 4, nstart = 25)
+k5 <- kmeans(n4, centers = 5, nstart = 25)
+k6 <- kmeans(n4, centers = 6, nstart = 25)
+k7 <- kmeans(n4, centers = 7, nstart = 25)
+k8 <- kmeans(n4, centers = 8, nstart = 25)
+k9 <- kmeans(n4, centers = 9, nstart = 25)
+k10 <- kmeans(n4, centers = 10, nstart = 25)
+k11 <- kmeans(n4, centers = 11, nstart = 25)
+k12 <- kmeans(n4, centers = 12, nstart = 25)
+k13 <- kmeans(n4, centers = 13, nstart = 25)
+k14 <- kmeans(n4, centers = 14, nstart = 25)
+k15 <- kmeans(n4, centers = 15, nstart = 25)
+k16 <- kmeans(n4, centers = 16, nstart = 25)
+
+#visualizations
+p2 <- fviz_cluster(k2, geom = "point",  data = n2) + ggtitle("k = 2")
+p3 <- fviz_cluster(k3, geom = "point",  data = n2) + ggtitle("k = 3")
+p4 <- fviz_cluster(k4, geom = "point",  data = n2) + ggtitle("k = 4")
+p5 <- fviz_cluster(k5, geom = "point",  data = n2) + ggtitle("k = 5")
+p6 <- fviz_cluster(k6, geom = "point",  data = n2) + ggtitle("k = 6")
+p7 <- fviz_cluster(k7, geom = "point",  data = n2) + ggtitle("k = 7")
+p8 <- fviz_cluster(k8, geom = "point",  data = n2) + ggtitle("k = 8")
+p9 <- fviz_cluster(k9, geom = "point",  data = n2) + ggtitle("k = 9")
+p10 <- fviz_cluster(k10, geom = "point",  data = n2) + ggtitle("k = 10")
+p11 <- fviz_cluster(k11, geom = "point",  data = n2) + ggtitle("k = 11")
+p12 <- fviz_cluster(k12, geom = "point",  data = n2) + ggtitle("k = 12")
+p13 <- fviz_cluster(k13, geom = "point",  data = n2) + ggtitle("k = 13")
+p14 <- fviz_cluster(k14, geom = "point",  data = n2) + ggtitle("k = 14")
+p15 <- fviz_cluster(k15, geom = "point",  data = n2) + ggtitle("k = 15")
+p16 <- fviz_cluster(k16, geom = "point",  data = n2) + ggtitle("k = 16")
+
+grid.arrange(p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16, nrow = 3)
+
+grid.arrange(p5, p11, p14, nrow = 1)
+
+ggsave("k")
+
+
+View(model.r4$centers)
+```
+
+#df2 new positions
+```{r}
+pinfo <- nba2 %>% subset(select = c(player_id, player_name, season))
+
+#statistical differences
+stat_centers <- as.data.frame(model.r2$centers)
+rownames(stat_centers) <- c("pos1", "pos2", "pos3", "pos4", "pos5", "pos6", "pos7", "pos8", "pos9", "pos10", "pos11", "pos12", "pos13", "pos14")
+
+colnames(stat_centers[76:79])
+
+positions <- c("pos1", "pos2", "pos3", "pos4", "pos5", "pos6", "pos7", "pos8", "pos9", "pos10", "pos11", "pos12", "pos13", "pos14")
+
+stat_centers <- data.frame(stat_centers, positions) |>
+  relocate(positions, .before = ast)
+
+stat_rankings <- stat_centers %>% 
+  mutate(across(-positions, ~ rank(- .x)))
+
+srpiv <- stat_rankings %>%
+  pivot_longer(cols = !positions, names_to = "statistic", values_to = "ranking")
+
+pos_avg_rk <- srpiv %>%
+  group_by(positions) %>%
+  summarize(avgRk = mean(ranking))
+
+datadistshortset<-dist(n2,method = "euclidean")
+hc1 <- hclust(datadistshortset, method = "complete" )
+pamvshortset <- pam(datadistshortset, 14, diss = FALSE)
+clusplot(pamvshortset, shade = FALSE, labels=2,col.clus="blue",col.p="red",span=FALSE,main="Cluster Mapping",cex=1.2)
+
+sc2 <- as_tibble(sapply(stat_centers, function(stat_centers) max(stat_centers, na.rm=TRUE) - min(stat_centers, na.rm=TRUE)))
+colnames(sc2) <- c("range")
+sc2$statistic <- colnames(stat_centers)
+
+sc2 <- as_tibble()
+
+sc2 <- as_tibble(rownames(stat_centers)[apply(stat_centers,2,which.max)])
+colnames(sc2) <- c("pos")
+sc2$statistic <- colnames(stat_centers)
+
+#example Players
+np_players <- left_join(x = pinfo, y = cluster_assignment, by = "player_id", all.y = TRUE)
+glimpse(np_players)
+
+View(np_players %>%
+  filter(pospred == 14) %>%
+    relocate(points, .before = ast) %>%
+    group_by(player_name) %>%
+    summarise(count = n()))
+
+View(srpiv %>%
+       filter(positions == "pos5"))
+
+np_players %>%
+  group_by(pospred) %>%
+  summarise(count = n()) %>%
+  ggplot(aes(x = as.factor(pospred), y = count, fill = count), color = "black") + geom_col() + geom_label(aes(x = as.factor(pospred), y = count, label = count), color = "white")+ xlab("Predicted Positions") + ggtitle("Count of Observations at Each New Position") + theme_bw() + theme(axis.text.x = element_text(hjust = 0.5, size = 16), plot.title = element_text(hjust = 0.5), legend.position = "bottom", plot.margin = unit(c(5,20,5,5), "pt"))
+ggsave("newpos-Count.jpeg")
+
+View(np_players %>%
+  filter(season == "2016-17") %>%
+  filter(player_name == "Stephen Curry" | player_name == "Kevin Durant" | player_name == "Draymond Green" | player_name == "Klay Thompson" | player_name == "Andre Iguodala"))
+
+```
+

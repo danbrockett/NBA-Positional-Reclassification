@@ -1,0 +1,837 @@
+---
+title: "ThesisCode"
+output: html_document
+date: "2022-12-12"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(httr)
+library(tidyverse)
+library(jsonlite)
+
+seasons <- data_frame(2013:2021)
+colnames(seasons) <- c("year")
+seasons$advYear <- seasons$year + 1
+seasons$seasonYears <- paste0(seasons$year,"-",seasons$advYear, sep = "")
+
+
+headers = c(
+  `Connection` = 'keep-alive',
+  `Accept` = 'application/json, text/plain, */*',
+  `x-nba-stats-token` = 'true',
+  `User-Agent` = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36',
+  `x-nba-stats-origin` = 'stats',
+  `Sec-Fetch-Site` = 'same-site',
+  `Sec-Fetch-Mode` = 'cors',
+  `Referer` = 'https://www.nba.com/',
+  `Accept-Encoding` = 'gzip, deflate, br',
+  `Accept-Language` = 'en-US,en;q=0.9'
+)
+#tracking
+url <- paste("https://stats.nba.com/stats/leaguedashptstats?College=&Conference=&Country=&DateFrom=&DateTo=&Division=&DraftPick=&DraftYear=&GameScope=&Height=&LastNGames=0&LeagueID=00&Location=&Month=0&OpponentTeamID=0&Outcome=&PORound=0&PerMode=Totals&PlayerExperience=&PlayerOrTeam=Player&PlayerPosition=&PtMeasureType=",ptMeasType,"&Season=",season,"&SeasonSegment=&SeasonType=Regular%20Season&StarterBench=&TeamID=0&VsConference=&VsDivision=&Weight=", sep="")
+
+pageName <- c(tm1 <- "Drives",
+              tm2 <- "Defense",
+              tm3 <- "CatchShoot",
+              tm4 <- "Passing",
+              tm5 <- "Possessions",
+              tm6 <- "PuLlUpShot",
+              tm7 <- "Rebounding",
+              tm8 <- "Efficiency",
+              tm9 <- "SpeedDistance",
+              tm10 <- "ElbowTouch",
+              tm11 <- "PostTouch",
+              tm12 <- "PaintTouch")
+trackingPages <- tibble(pageName)
+
+trackingPages$sNumbers <- c()
+sNumbers <- 2013:2022
+
+for (i in 1:nrow(trackingPages)) {
+  trackingPages[i, ] <- i
+}
+
+res <- httr::GET(url = url, httr::add_headers(.headers=headers))
+ 
+json_resp <- jsonlite::fromJSON(content(res, "text"))
+
+frame <- data.frame(json_resp$resultSets$rowSet[1])
+colnames(frame) <- json_resp[["resultSets"]][["headers"]][[1]]
+
+
+#base
+url <- paste0("https://stats.nba.com/stats/leaguedashplayerstats?College=&Conference=&Country=&DateFrom=&DateTo=&Division=&DraftPick=&DraftYear=&GameScope=&GameSegment=&Height=&LastNGames=0&LeagueID=00&Location=&MeasureType=",mType,"&Month=0&OpponentTeamID=0&Outcome=&PORound=0&PaceAdjust=N&PerMode=Totals&Period=0&PlayerExperience=&PlayerPosition=&PlusMinus=N&Rank=N&Season=",season,"&SeasonSegment=&SeasonType=Regular%20Season&ShotClockRange=&StarterBench=&TeamID=0&VsConference=&VsDivision=&Weight=", sep ="")
+
+m1 <- "Base"
+m2 <- "Advanced"
+m3 <- "Misc"
+m4 <- "Scoring"
+m5 <- "Usage"
+m6 <- "Opponent"
+m7 <- "Defense"
+
+
+```
+
+#drive data
+```{r}
+headers = c(
+  `Connection` = 'keep-alive',
+  `Accept` = 'application/json, text/plain, */*',
+  `x-nba-stats-token` = 'true',
+  `User-Agent` = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36',
+  `x-nba-stats-origin` = 'stats',
+  `Sec-Fetch-Site` = 'same-site',
+  `Sec-Fetch-Mode` = 'cors',
+  `Referer` = 'https://www.nba.com/',
+  `Accept-Encoding` = 'gzip, deflate, br',
+  `Accept-Language` = 'en-US,en;q=0.9'
+)
+
+szn <- "2022-23"
+
+driveData<-function(season){
+
+url <- paste0("https://stats.nba.com/stats/leaguedashptstats?College=&Conference=&Country=&DateFrom=&DateTo=&Division=&DraftPick=&DraftYear=&GameScope=&Height=&LastNGames=0&LeagueID=00&Location=&Month=0&OpponentTeamID=0&Outcome=&PORound=0&PerMode=Totals&PlayerExperience=&PlayerOrTeam=Player&PlayerPosition=&PtMeasureType=Drives&Season=",season,"&SeasonSegment=&SeasonType=Regular+Season&StarterBench=&TeamID=0&VsConference=&VsDivision=&Weight=", sep="")
+ 
+res <- GET(url = url, add_headers(.headers=headers))
+ 
+json_resp <- fromJSON(content(res, "text"))
+
+frame <- data.frame(json_resp$resultSets$rowSet[1])
+colnames(frame) <- json_resp[["resultSets"]][["headers"]][[1]]
+
+dropCols<- c(2,4,5:7)
+frame<-frame[,-dropCols]
+
+frame <- frame %>% mutate_if(is.character, as.numeric)
+frame$season <- as.character(season)
+
+return(frame)
+
+Sys.sleep(3)
+}
+
+a1 <- driveData("2013-14")
+a2 <- driveData("2014-15")
+a3 <- driveData("2015-16")
+a4 <- driveData("2016-17")
+a5 <- driveData("2017-18")
+a6 <- driveData("2018-19")
+a7 <- driveData("2019-20")
+a8 <- driveData("2020-21")
+a9 <- driveData("2021-22")
+drives<-bind_rows(a1, a2, a3, a4, a5, a6, a7, a8, a9)
+
+```
+
+
+
+#defense data
+```{r}
+headers = c(
+  `Connection` = 'keep-alive',
+  `Accept` = 'application/json, text/plain, */*',
+  `x-nba-stats-token` = 'true',
+  `User-Agent` = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36',
+  `x-nba-stats-origin` = 'stats',
+  `Sec-Fetch-Site` = 'same-site',
+  `Sec-Fetch-Mode` = 'cors',
+  `Referer` = 'https://www.nba.com/',
+  `Accept-Encoding` = 'gzip, deflate, br',
+  `Accept-Language` = 'en-US,en;q=0.9'
+)
+
+defenseData<-function(season){
+
+url <- paste0("https://stats.nba.com/stats/leaguedashptstats?College=&Conference=&Country=&DateFrom=&DateTo=&Division=&DraftPick=&DraftYear=&GameScope=&Height=&LastNGames=0&LeagueID=00&Location=&Month=0&OpponentTeamID=0&Outcome=&PORound=0&PerMode=Totals&PlayerExperience=&PlayerOrTeam=Player&PlayerPosition=&PtMeasureType=Defense&Season=",season,"&SeasonSegment=&SeasonType=Regular+Season&StarterBench=&TeamID=0&VsConference=&VsDivision=&Weight=", sep="")
+ 
+res <- GET(url = url, add_headers(.headers=headers))
+ 
+json_resp <- fromJSON(content(res, "text"))
+
+frame <- data.frame(json_resp$resultSets$rowSet[1])
+colnames(frame) <- json_resp[["resultSets"]][["headers"]][[1]]
+
+dropCols<- c(2,4,5:7)
+frame<-frame[,-dropCols]
+
+frame <- frame %>% mutate_if(is.character, as.numeric)
+frame$season <- as.character(season)
+
+return(frame)
+
+Sys.sleep(3)
+}
+
+a1 <- defenseData("2013-14")
+a2 <- defenseData("2014-15")
+a3 <- defenseData("2015-16")
+a4 <- defenseData("2016-17")
+a5 <- defenseData("2017-18")
+a6 <- defenseData("2018-19")
+a7 <- defenseData("2019-20")
+a8 <- defenseData("2020-21")
+a9 <- defenseData("2021-22")
+defense<-bind_rows(a1, a2, a3, a4, a5, a6, a7, a8, a9)
+
+```
+
+
+
+#catch and shoot data
+```{r}
+headers = c(
+  `Connection` = 'keep-alive',
+  `Accept` = 'application/json, text/plain, */*',
+  `x-nba-stats-token` = 'true',
+  `User-Agent` = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36',
+  `x-nba-stats-origin` = 'stats',
+  `Sec-Fetch-Site` = 'same-site',
+  `Sec-Fetch-Mode` = 'cors',
+  `Referer` = 'https://www.nba.com/',
+  `Accept-Encoding` = 'gzip, deflate, br',
+  `Accept-Language` = 'en-US,en;q=0.9'
+)
+
+csDataScrape<-function(season){
+
+url <- paste0("https://stats.nba.com/stats/leaguedashptstats?College=&Conference=&Country=&DateFrom=&DateTo=&Division=&DraftPick=&DraftYear=&GameScope=&Height=&LastNGames=0&LeagueID=00&Location=&Month=0&OpponentTeamID=0&Outcome=&PORound=0&PerMode=Totals&PlayerExperience=&PlayerOrTeam=Player&PlayerPosition=&PtMeasureType=CatchShoot&Season=",season,"&SeasonSegment=&SeasonType=Regular+Season&StarterBench=&TeamID=0&VsConference=&VsDivision=&Weight=", sep="")
+ 
+res <- GET(url = url, add_headers(.headers=headers))
+ 
+json_resp <- fromJSON(content(res, "text"))
+
+frame <- data.frame(json_resp$resultSets$rowSet[1])
+colnames(frame) <- json_resp[["resultSets"]][["headers"]][[1]]
+
+dropCols<- c(2,4,5:7)
+frame<-frame[,-dropCols]
+
+frame <- frame %>% mutate_if(is.character, as.numeric)
+frame$season <- as.character(season)
+
+return(frame)
+
+Sys.sleep(3)
+}
+
+a1 <- csDataScrape("2013-14")
+a2 <- csDataScrape("2014-15")
+a3 <- csDataScrape("2015-16")
+a4 <- csDataScrape("2016-17")
+a5 <- csDataScrape("2017-18")
+a6 <- csDataScrape("2018-19")
+a7 <- csDataScrape("2019-20")
+a8 <- csDataScrape("2020-21")
+a9 <- csDataScrape("2021-22")
+catchShoot<-bind_rows(a1, a2, a3, a4, a5, a6, a7, a8, a9)
+
+```
+
+
+
+
+#passing data
+```{r}
+headers = c(
+  `Connection` = 'keep-alive',
+  `Accept` = 'application/json, text/plain, */*',
+  `x-nba-stats-token` = 'true',
+  `User-Agent` = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36',
+  `x-nba-stats-origin` = 'stats',
+  `Sec-Fetch-Site` = 'same-site',
+  `Sec-Fetch-Mode` = 'cors',
+  `Referer` = 'https://www.nba.com/',
+  `Accept-Encoding` = 'gzip, deflate, br',
+  `Accept-Language` = 'en-US,en;q=0.9'
+)
+
+passingDataScrape<-function(season){
+
+url <- paste0("https://stats.nba.com/stats/leaguedashptstats?College=&Conference=&Country=&DateFrom=&DateTo=&Division=&DraftPick=&DraftYear=&GameScope=&Height=&LastNGames=0&LeagueID=00&Location=&Month=0&OpponentTeamID=0&Outcome=&PORound=0&PerMode=Totals&PlayerExperience=&PlayerOrTeam=Player&PlayerPosition=&PtMeasureType=Passing&Season=",season,"&SeasonSegment=&SeasonType=Regular+Season&StarterBench=&TeamID=0&VsConference=&VsDivision=&Weight=", sep="")
+ 
+res <- GET(url = url, add_headers(.headers=headers))
+ 
+json_resp <- fromJSON(content(res, "text"))
+
+frame <- data.frame(json_resp$resultSets$rowSet[1])
+colnames(frame) <- json_resp[["resultSets"]][["headers"]][[1]]
+
+dropCols<- c(2,4,5:7)
+frame<-frame[,-dropCols]
+
+frame <- frame %>% mutate_if(is.character, as.numeric)
+frame$season <- as.character(season)
+
+return(frame)
+
+Sys.sleep(3)
+}
+
+a1 <- passingDataScrape("2013-14")
+a2 <- passingDataScrape("2014-15")
+a3 <- passingDataScrape("2015-16")
+a4 <- passingDataScrape("2016-17")
+a5 <- passingDataScrape("2017-18")
+a6 <- passingDataScrape("2018-19")
+a7 <- passingDataScrape("2019-20")
+a8 <- passingDataScrape("2020-21")
+a9 <- passingDataScrape("2021-22")
+passing<-bind_rows(a1, a2, a3, a4, a5, a6, a7, a8, a9)
+
+```
+
+
+
+
+#possesion data
+```{r}
+headers = c(
+  `Connection` = 'keep-alive',
+  `Accept` = 'application/json, text/plain, */*',
+  `x-nba-stats-token` = 'true',
+  `User-Agent` = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36',
+  `x-nba-stats-origin` = 'stats',
+  `Sec-Fetch-Site` = 'same-site',
+  `Sec-Fetch-Mode` = 'cors',
+  `Referer` = 'https://www.nba.com/',
+  `Accept-Encoding` = 'gzip, deflate, br',
+  `Accept-Language` = 'en-US,en;q=0.9'
+)
+
+possesionDataScrape<-function(season){
+
+url <- paste0("https://stats.nba.com/stats/leaguedashptstats?College=&Conference=&Country=&DateFrom=&DateTo=&Division=&DraftPick=&DraftYear=&GameScope=&Height=&LastNGames=0&LeagueID=00&Location=&Month=0&OpponentTeamID=0&Outcome=&PORound=0&PerMode=Totals&PlayerExperience=&PlayerOrTeam=Player&PlayerPosition=&PtMeasureType=Possessions&Season=",season,"&SeasonSegment=&SeasonType=Regular+Season&StarterBench=&TeamID=0&VsConference=&VsDivision=&Weight=", sep="")
+ 
+res <- GET(url = url, add_headers(.headers=headers))
+ 
+json_resp <- fromJSON(content(res, "text"))
+
+frame <- data.frame(json_resp$resultSets$rowSet[1])
+colnames(frame) <- json_resp[["resultSets"]][["headers"]][[1]]
+
+dropCols<- c(2,4,5:7)
+frame<-frame[,-dropCols]
+
+frame <- frame %>% mutate_if(is.character, as.numeric)
+frame$season <- as.character(season)
+
+return(frame)
+
+Sys.sleep(3)
+}
+
+a1 <- possesionDataScrape("2013-14")
+a2 <- possesionDataScrape("2014-15")
+a3 <- possesionDataScrape("2015-16")
+a4 <- possesionDataScrape("2016-17")
+a5 <- possesionDataScrape("2017-18")
+a6 <- possesionDataScrape("2018-19")
+a7 <- possesionDataScrape("2019-20")
+a8 <- possesionDataScrape("2020-21")
+a9 <- possesionDataScrape("2021-22")
+possessions<-bind_rows(a1, a2, a3, a4, a5, a6, a7, a8, a9)
+
+```
+
+
+
+
+#pull up shot data
+```{r}
+headers = c(
+  `Connection` = 'keep-alive',
+  `Accept` = 'application/json, text/plain, */*',
+  `x-nba-stats-token` = 'true',
+  `User-Agent` = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36',
+  `x-nba-stats-origin` = 'stats',
+  `Sec-Fetch-Site` = 'same-site',
+  `Sec-Fetch-Mode` = 'cors',
+  `Referer` = 'https://www.nba.com/',
+  `Accept-Encoding` = 'gzip, deflate, br',
+  `Accept-Language` = 'en-US,en;q=0.9'
+)
+
+puShotDataScrape<-function(season){
+
+url <- paste0("https://stats.nba.com/stats/leaguedashptstats?College=&Conference=&Country=&DateFrom=&DateTo=&Division=&DraftPick=&DraftYear=&GameScope=&Height=&LastNGames=0&LeagueID=00&Location=&Month=0&OpponentTeamID=0&Outcome=&PORound=0&PerMode=Totals&PlayerExperience=&PlayerOrTeam=Player&PlayerPosition=&PtMeasureType=PullUpShot&Season=",season,"&SeasonSegment=&SeasonType=Regular+Season&StarterBench=&TeamID=0&VsConference=&VsDivision=&Weight=", sep="")
+ 
+res <- GET(url = url, add_headers(.headers=headers))
+ 
+json_resp <- fromJSON(content(res, "text"))
+
+frame <- data.frame(json_resp$resultSets$rowSet[1])
+colnames(frame) <- json_resp[["resultSets"]][["headers"]][[1]]
+
+dropCols<- c(2,4,5:7)
+frame<-frame[,-dropCols]
+
+frame <- frame %>% mutate_if(is.character, as.numeric)
+frame$season <- as.character(season)
+
+return(frame)
+
+Sys.sleep(3)
+}
+
+a1 <- puShotDataScrape("2013-14")
+a2 <- puShotDataScrape("2014-15")
+a3 <- puShotDataScrape("2015-16")
+a4 <- puShotDataScrape("2016-17")
+a5 <- puShotDataScrape("2017-18")
+a6 <- puShotDataScrape("2018-19")
+a7 <- puShotDataScrape("2019-20")
+a8 <- puShotDataScrape("2020-21")
+a9 <- puShotDataScrape("2021-22")
+pullupShot<-bind_rows(a1, a2, a3, a4, a5, a6, a7, a8, a9)
+
+```
+
+#rebounding data
+```{r}
+headers = c(
+  `Connection` = 'keep-alive',
+  `Accept` = 'application/json, text/plain, */*',
+  `x-nba-stats-token` = 'true',
+  `User-Agent` = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36',
+  `x-nba-stats-origin` = 'stats',
+  `Sec-Fetch-Site` = 'same-site',
+  `Sec-Fetch-Mode` = 'cors',
+  `Referer` = 'https://www.nba.com/',
+  `Accept-Encoding` = 'gzip, deflate, br',
+  `Accept-Language` = 'en-US,en;q=0.9'
+)
+
+reboundScrape<-function(season){
+
+url <- paste0("https://stats.nba.com/stats/leaguedashptstats?College=&Conference=&Country=&DateFrom=&DateTo=&Division=&DraftPick=&DraftYear=&GameScope=&Height=&LastNGames=0&LeagueID=00&Location=&Month=0&OpponentTeamID=0&Outcome=&PORound=0&PerMode=Totals&PlayerExperience=&PlayerOrTeam=Player&PlayerPosition=&PtMeasureType=Rebounding&Season=",season,"&SeasonSegment=&SeasonType=Regular+Season&StarterBench=&TeamID=0&VsConference=&VsDivision=&Weight=", sep="")
+ 
+res <- GET(url = url, add_headers(.headers=headers))
+ 
+json_resp <- fromJSON(content(res, "text"))
+
+frame <- data.frame(json_resp$resultSets$rowSet[1])
+colnames(frame) <- json_resp[["resultSets"]][["headers"]][[1]]
+
+dropCols<- c(2,4,5:7)
+frame<-frame[,-dropCols]
+
+frame <- frame %>% mutate_if(is.character, as.numeric)
+frame$season <- as.character(season)
+
+return(frame)
+
+Sys.sleep(3)
+}
+
+a1 <- reboundScrape("2013-14")
+a2 <- reboundScrape("2014-15")
+a3 <- reboundScrape("2015-16")
+a4 <- reboundScrape("2016-17")
+a5 <- reboundScrape("2017-18")
+a6 <- reboundScrape("2018-19")
+a7 <- reboundScrape("2019-20")
+a8 <- reboundScrape("2020-21")
+a9 <- reboundScrape("2021-22")
+rebounding<-bind_rows(a1, a2, a3, a4, a5, a6, a7, a8, a9)
+
+```
+
+#efficiency data
+```{r}
+headers = c(
+  `Connection` = 'keep-alive',
+  `Accept` = 'application/json, text/plain, */*',
+  `x-nba-stats-token` = 'true',
+  `User-Agent` = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36',
+  `x-nba-stats-origin` = 'stats',
+  `Sec-Fetch-Site` = 'same-site',
+  `Sec-Fetch-Mode` = 'cors',
+  `Referer` = 'https://www.nba.com/',
+  `Accept-Encoding` = 'gzip, deflate, br',
+  `Accept-Language` = 'en-US,en;q=0.9'
+)
+
+efficiencyScrape<-function(season){
+
+url <- paste0("https://stats.nba.com/stats/leaguedashptstats?College=&Conference=&Country=&DateFrom=&DateTo=&Division=&DraftPick=&DraftYear=&GameScope=&Height=&LastNGames=0&LeagueID=00&Location=&Month=0&OpponentTeamID=0&Outcome=&PORound=0&PerMode=Totals&PlayerExperience=&PlayerOrTeam=Player&PlayerPosition=&PtMeasureType=Efficiency&Season=",season,"&SeasonSegment=&SeasonType=Regular+Season&StarterBench=&TeamID=0&VsConference=&VsDivision=&Weight=", sep="")
+ 
+res <- GET(url = url, add_headers(.headers=headers))
+ 
+json_resp <- fromJSON(content(res, "text"))
+
+frame <- data.frame(json_resp$resultSets$rowSet[1])
+colnames(frame) <- json_resp[["resultSets"]][["headers"]][[1]]
+
+dropCols<- c(2,4,5:7)
+frame<-frame[,-dropCols]
+
+frame <- frame %>% mutate_if(is.character, as.numeric)
+frame$season <- as.character(season)
+
+return(frame)
+
+Sys.sleep(3)
+}
+
+a1 <- efficiencyScrape("2013-14")
+a2 <- efficiencyScrape("2014-15")
+a3 <- efficiencyScrape("2015-16")
+a4 <- efficiencyScrape("2016-17")
+a5 <- efficiencyScrape("2017-18")
+a6 <- efficiencyScrape("2018-19")
+a7 <- efficiencyScrape("2019-20")
+a8 <- efficiencyScrape("2020-21")
+a9 <- efficiencyScrape("2021-22")
+efficiencyData<-bind_rows(a1, a2, a3, a4, a5, a6, a7, a8, a9)
+
+```
+
+
+#speed and distance data
+```{r}
+headers = c(
+  `Connection` = 'keep-alive',
+  `Accept` = 'application/json, text/plain, */*',
+  `x-nba-stats-token` = 'true',
+  `User-Agent` = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36',
+  `x-nba-stats-origin` = 'stats',
+  `Sec-Fetch-Site` = 'same-site',
+  `Sec-Fetch-Mode` = 'cors',
+  `Referer` = 'https://www.nba.com/',
+  `Accept-Encoding` = 'gzip, deflate, br',
+  `Accept-Language` = 'en-US,en;q=0.9'
+)
+
+sdScrape<-function(season){
+
+url <- paste0("https://stats.nba.com/stats/leaguedashptstats?College=&Conference=&Country=&DateFrom=&DateTo=&Division=&DraftPick=&DraftYear=&GameScope=&Height=&LastNGames=0&LeagueID=00&Location=&Month=0&OpponentTeamID=0&Outcome=&PORound=0&PerMode=Totals&PlayerExperience=&PlayerOrTeam=Player&PlayerPosition=&PtMeasureType=SpeedDistance&Season=",season,"&SeasonSegment=&SeasonType=Regular+Season&StarterBench=&TeamID=0&VsConference=&VsDivision=&Weight=", sep="")
+ 
+res <- GET(url = url, add_headers(.headers=headers))
+ 
+json_resp <- fromJSON(content(res, "text"))
+
+frame <- data.frame(json_resp$resultSets$rowSet[1])
+colnames(frame) <- json_resp[["resultSets"]][["headers"]][[1]]
+
+dropCols<- c(2,4,5:7)
+frame<-frame[,-dropCols]
+
+frame <- frame %>% mutate_if(is.character, as.numeric)
+frame$season <- as.character(season)
+
+return(frame)
+
+Sys.sleep(3)
+}
+
+a1 <- sdScrape("2013-14")
+a2 <- sdScrape("2014-15")
+a3 <- sdScrape("2015-16")
+a4 <- sdScrape("2016-17")
+a5 <- sdScrape("2017-18")
+a6 <- sdScrape("2018-19")
+a7 <- sdScrape("2019-20")
+a8 <- sdScrape("2020-21")
+a9 <- sdScrape("2021-22")
+speedDistance<-bind_rows(a1, a2, a3, a4, a5, a6, a7, a8, a9)
+
+```
+
+
+#elbow touch data
+```{r}
+headers = c(
+  `Connection` = 'keep-alive',
+  `Accept` = 'application/json, text/plain, */*',
+  `x-nba-stats-token` = 'true',
+  `User-Agent` = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36',
+  `x-nba-stats-origin` = 'stats',
+  `Sec-Fetch-Site` = 'same-site',
+  `Sec-Fetch-Mode` = 'cors',
+  `Referer` = 'https://www.nba.com/',
+  `Accept-Encoding` = 'gzip, deflate, br',
+  `Accept-Language` = 'en-US,en;q=0.9'
+)
+
+etScrape<-function(season){
+
+url <- paste0("https://stats.nba.com/stats/leaguedashptstats?College=&Conference=&Country=&DateFrom=&DateTo=&Division=&DraftPick=&DraftYear=&GameScope=&Height=&LastNGames=0&LeagueID=00&Location=&Month=0&OpponentTeamID=0&Outcome=&PORound=0&PerMode=Totals&PlayerExperience=&PlayerOrTeam=Player&PlayerPosition=&PtMeasureType=ElbowTouch&Season=",season,"&SeasonSegment=&SeasonType=Regular+Season&StarterBench=&TeamID=0&VsConference=&VsDivision=&Weight=", sep="")
+ 
+res <- GET(url = url, add_headers(.headers=headers))
+ 
+json_resp <- fromJSON(content(res, "text"))
+
+frame <- data.frame(json_resp$resultSets$rowSet[1])
+colnames(frame) <- json_resp[["resultSets"]][["headers"]][[1]]
+
+dropCols<- c(2,4,5:7)
+frame<-frame[,-dropCols]
+
+frame <- frame %>% mutate_if(is.character, as.numeric)
+frame$season <- as.character(season)
+
+return(frame)
+
+Sys.sleep(3)
+}
+
+a1 <- etScrape("2013-14")
+a2 <- etScrape("2014-15")
+a3 <- etScrape("2015-16")
+a4 <- etScrape("2016-17")
+a5 <- etScrape("2017-18")
+a6 <- etScrape("2018-19")
+a7 <- etScrape("2019-20")
+a8 <- etScrape("2020-21")
+a9 <- etScrape("2021-22")
+elbowTouches<-bind_rows(a1, a2, a3, a4, a5, a6, a7, a8, a9)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#post touch data
+```{r}
+headers = c(
+  `Connection` = 'keep-alive',
+  `Accept` = 'application/json, text/plain, */*',
+  `x-nba-stats-token` = 'true',
+  `User-Agent` = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36',
+  `x-nba-stats-origin` = 'stats',
+  `Sec-Fetch-Site` = 'same-site',
+  `Sec-Fetch-Mode` = 'cors',
+  `Referer` = 'https://www.nba.com/',
+  `Accept-Encoding` = 'gzip, deflate, br',
+  `Accept-Language` = 'en-US,en;q=0.9'
+)
+
+postTouchScrape<-function(season){
+
+url <- paste0("https://stats.nba.com/stats/leaguedashptstats?College=&Conference=&Country=&DateFrom=&DateTo=&Division=&DraftPick=&DraftYear=&GameScope=&Height=&LastNGames=0&LeagueID=00&Location=&Month=0&OpponentTeamID=0&Outcome=&PORound=0&PerMode=Totals&PlayerExperience=&PlayerOrTeam=Player&PlayerPosition=&PtMeasureType=PostTouch&Season=",season,"&SeasonSegment=&SeasonType=Regular+Season&StarterBench=&TeamID=0&VsConference=&VsDivision=&Weight=", sep="")
+ 
+res <- GET(url = url, add_headers(.headers=headers))
+ 
+json_resp <- fromJSON(content(res, "text"))
+
+frame <- data.frame(json_resp$resultSets$rowSet[1])
+colnames(frame) <- json_resp[["resultSets"]][["headers"]][[1]]
+
+dropCols<- c(2,4,5:7)
+frame<-frame[,-dropCols]
+
+frame <- frame %>% mutate_if(is.character, as.numeric)
+frame$season <- as.character(season)
+
+return(frame)
+
+Sys.sleep(3)
+}
+
+a1 <- postTouchScrape("2013-14")
+a2 <- postTouchScrape("2014-15")
+a3 <- postTouchScrape("2015-16")
+a4 <- postTouchScrape("2016-17")
+a5 <- postTouchScrape("2017-18")
+a6 <- postTouchScrape("2018-19")
+a7 <- postTouchScrape("2019-20")
+a8 <- postTouchScrape("2020-21")
+a9 <- postTouchScrape("2021-22")
+postTouches<-bind_rows(a1, a2, a3, a4, a5, a6, a7, a8, a9)
+
+```
+
+#paint touch data
+```{r}
+headers = c(
+  `Connection` = 'keep-alive',
+  `Accept` = 'application/json, text/plain, */*',
+  `x-nba-stats-token` = 'true',
+  `User-Agent` = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36',
+  `x-nba-stats-origin` = 'stats',
+  `Sec-Fetch-Site` = 'same-site',
+  `Sec-Fetch-Mode` = 'cors',
+  `Referer` = 'https://www.nba.com/',
+  `Accept-Encoding` = 'gzip, deflate, br',
+  `Accept-Language` = 'en-US,en;q=0.9'
+)
+
+paintTouchScrape<-function(season){
+
+url <- paste0("https://stats.nba.com/stats/leaguedashptstats?College=&Conference=&Country=&DateFrom=&DateTo=&Division=&DraftPick=&DraftYear=&GameScope=&Height=&LastNGames=0&LeagueID=00&Location=&Month=0&OpponentTeamID=0&Outcome=&PORound=0&PerMode=Totals&PlayerExperience=&PlayerOrTeam=Player&PlayerPosition=&PtMeasureType=PaintTouch&Season=",season,"&SeasonSegment=&SeasonType=Regular+Season&StarterBench=&TeamID=0&VsConference=&VsDivision=&Weight=", sep="")
+ 
+res <- GET(url = url, add_headers(.headers=headers))
+ 
+json_resp <- fromJSON(content(res, "text"))
+
+frame <- data.frame(json_resp$resultSets$rowSet[1])
+colnames(frame) <- json_resp[["resultSets"]][["headers"]][[1]]
+
+dropCols<- c(2,4,5:7)
+frame<-frame[,-dropCols]
+
+frame <- frame %>% mutate_if(is.character, as.numeric)
+frame$season <- as.character(season)
+
+return(frame)
+
+Sys.sleep(3)
+}
+
+a1 <- paintTouchScrape("2013-14")
+a2 <- paintTouchScrape("2014-15")
+a3 <- paintTouchScrape("2015-16")
+a4 <- paintTouchScrape("2016-17")
+a5 <- paintTouchScrape("2017-18")
+a6 <- paintTouchScrape("2018-19")
+a7 <- paintTouchScrape("2019-20")
+a8 <- paintTouchScrape("2020-21")
+a9 <- paintTouchScrape("2021-22")
+paintTouches<-bind_rows(a1, a2, a3, a4, a5, a6, a7, a8, a9)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+df1 <- merge(drives,defense,by=c("PLAYER_ID","TEAM_ID", "season", "MIN"))
+df2 <- merge(df1,catchShoot,by=c("PLAYER_ID","TEAM_ID", "season", "MIN"))
+df3 <- merge(df2,passing,by=c("PLAYER_ID","TEAM_ID", "season", "MIN"))
+df4 <- merge(df3,possessions,by=c("PLAYER_ID","TEAM_ID", "season", "MIN"))
+df5 <- merge(df4,pullupShot,by=c("PLAYER_ID","TEAM_ID", "season", "MIN"))
+df6 <- merge(df5,rebounding,by=c("PLAYER_ID","TEAM_ID", "season", "MIN"))
+df7 <- merge(df6,efficiencyData,by=c("PLAYER_ID","TEAM_ID", "season", "MIN"))
+df8 <- merge(df7,speedDistance,by=c("PLAYER_ID","TEAM_ID", "season", "MIN"))
+df9 <- merge(df8,elbowTouches,by=c("PLAYER_ID","TEAM_ID", "season", "MIN"))
+df10 <- merge(df9,postTouches,by=c("PLAYER_ID","TEAM_ID", "season", "MIN"))
+df11 <- merge(df10,paintTouches,by=c("PLAYER_ID","TEAM_ID", "season", "MIN"))
+
+
+
+totalData <- df11
+
+remCOL <- c(133)
+totalData<-totalData[,-remCOL]
+
+df_new <- totalData %>% select(-contains(".y"))
+names(df_new) = gsub(pattern = ".x", replacement = "", x = names(df_new))
+
+setwd("/Users/danielbrockett/Desktop/SAL495")
+write_csv(df_new, "NBAtrackingData.csv")
+
+df_new <- df_new %>%
+  filter(MIN >= 197)
+
+library(nbastatR)
+Sys.setenv(VROOM_CONNECTION_SIZE = 500072)
+pb <- bref_players_stats(seasons = 2013:2022, tables = c("totals"))
+pb <- pb %>%
+  filter(minutesTotals >= 197)
+
+colKEEP <- c(1:5)
+pb <- pb[,colKEEP]
+```
+
+#name data
+```{r}
+headers = c(
+  `Connection` = 'keep-alive',
+  `Accept` = 'application/json, text/plain, */*',
+  `x-nba-stats-token` = 'true',
+  `User-Agent` = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.55 Safari/537.36',
+  `x-nba-stats-origin` = 'stats',
+  `Sec-Fetch-Site` = 'same-site',
+  `Sec-Fetch-Mode` = 'cors',
+  `Referer` = 'https://www.nba.com/',
+  `Accept-Encoding` = 'gzip, deflate, br',
+  `Accept-Language` = 'en-US,en;q=0.9'
+)
+
+szn <- "2022-23"
+
+nameScrape<-function(season){
+
+url <- paste0("https://stats.nba.com/stats/leaguedashptstats?College=&Conference=&Country=&DateFrom=&DateTo=&Division=&DraftPick=&DraftYear=&GameScope=&Height=&LastNGames=0&LeagueID=00&Location=&Month=0&OpponentTeamID=0&Outcome=&PORound=0&PerMode=Totals&PlayerExperience=&PlayerOrTeam=Player&PlayerPosition=&PtMeasureType=Drives&Season=",season,"&SeasonSegment=&SeasonType=Regular+Season&StarterBench=&TeamID=0&VsConference=&VsDivision=&Weight=", sep="")
+ 
+res <- GET(url = url, add_headers(.headers=headers))
+ 
+json_resp <- fromJSON(content(res, "text"))
+
+frame <- data.frame(json_resp$resultSets$rowSet[1])
+colnames(frame) <- json_resp[["resultSets"]][["headers"]][[1]]
+
+keepCols<- c(1, 2, 3)
+frame<-frame[,keepCols]
+
+frame$season <- as.character(season)
+
+return(frame)
+
+Sys.sleep(3)
+}
+
+a1 <- nameScrape("2013-14")
+a2 <- nameScrape("2014-15")
+a3 <- nameScrape("2015-16")
+a4 <- nameScrape("2016-17")
+a5 <- nameScrape("2017-18")
+a6 <- nameScrape("2018-19")
+a7 <- nameScrape("2019-20")
+a8 <- nameScrape("2020-21")
+a9 <- nameScrape("2021-22")
+playerNames<-bind_rows(a1, a2, a3, a4, a5, a6, a7, a8, a9)
+
+playerNames$PLAYER_ID <- as.numeric(playerNames$PLAYER_ID)
+playerNames$TEAM_ID <- as.numeric(playerNames$TEAM_ID)
+
+total <- merge(df_new,playerNames,by=c("PLAYER_ID","TEAM_ID", "season"))
+
+total$PLAYER_NAME
+colnames(pb) <- c("season", "PLAYER_NAME", "groupPosition", "yearSeason", "position")
+
+trackingData <- merge(total,pb,by=c("PLAYER_NAME", "season"))
+
+write_csv(trackingData, "NBAtracking2.csv")
+
+```
+
+
+
